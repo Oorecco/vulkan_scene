@@ -1,0 +1,185 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\main.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\Game.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\Settings.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\AudioManager.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\SaveSystem.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\DevConsole.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\renderer\VulkanContext.cpp">
+      <Filter>Source\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\renderer\VulkanBuffer.cpp">
+      <Filter>Source\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\renderer\VulkanImage.cpp">
+      <Filter>Source\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\renderer\VulkanSwapchain.cpp">
+      <Filter>Source\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\renderer\VulkanPipeline.cpp">
+      <Filter>Source\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\renderer\VulkanRenderer.cpp">
+      <Filter>Source\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\renderer\AssetManager.cpp">
+      <Filter>Source\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\game\Player.cpp">
+      <Filter>Source\game</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\game\PhysicsCube.cpp">
+      <Filter>Source\game</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\game\Freecam.cpp">
+      <Filter>Source\game</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\game\ItemSystem.cpp">
+      <Filter>Source\game</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\game\CrateSpawner.cpp">
+      <Filter>Source\game</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\game\CursedObjects.cpp">
+      <Filter>Source\game</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\game\NPCShop.cpp">
+      <Filter>Source\game</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\game\TitleCamera.cpp">
+      <Filter>Source\game</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\scene\Scene.cpp">
+      <Filter>Source\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\scene\WorldDecorations.cpp">
+      <Filter>Source\scene</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\Common.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\Game.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\Settings.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\AudioManager.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\SaveSystem.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\DevConsole.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\renderer\VulkanContext.h">
+      <Filter>Source\renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\renderer\VulkanBuffer.h">
+      <Filter>Source\renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\renderer\VulkanImage.h">
+      <Filter>Source\renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\renderer\VulkanSwapchain.h">
+      <Filter>Source\renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\renderer\VulkanPipeline.h">
+      <Filter>Source\renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\renderer\VulkanRenderer.h">
+      <Filter>Source\renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\renderer\AssetManager.h">
+      <Filter>Source\renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\game\Player.h">
+      <Filter>Source\game</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\game\PhysicsCube.h">
+      <Filter>Source\game</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\game\Freecam.h">
+      <Filter>Source\game</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\game\ItemSystem.h">
+      <Filter>Source\game</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\game\CrateSpawner.h">
+      <Filter>Source\game</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\game\CursedObjects.h">
+      <Filter>Source\game</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\game\NPCShop.h">
+      <Filter>Source\game</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\game\TitleCamera.h">
+      <Filter>Source\game</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\game\ActiveEffects.h">
+      <Filter>Source\game</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\game\DayNight.h">
+      <Filter>Source\game</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\scene\Scene.h">
+      <Filter>Source\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\scene\WorldDecorations.h">
+      <Filter>Source\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\ui\Font.h">
+      <Filter>Source\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\62822\source\repos\vulkan_scene\src\ui\UIBatch.h">
+      <Filter>Source\ui</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\62822\source\repos\vulkan_scene\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="C:\Users\62822\source\repos\vulkan_scene\src\resource.rc">
+      <Filter>Resources</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{E7B444D7-FEC4-3A6A-8712-1B1E1D443CBF}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source">
+      <UniqueIdentifier>{7F9B43E3-744D-38BE-A666-10E83127E32C}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\game">
+      <UniqueIdentifier>{27A416AC-FB1F-338D-B1BD-F22B2EB23890}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\renderer">
+      <UniqueIdentifier>{4A15DCC2-51F0-3723-BC16-10FB3A34AAEA}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\scene">
+      <UniqueIdentifier>{007FF651-17EC-3B05-BB4C-526D8D128169}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\ui">
+      <UniqueIdentifier>{0530BA16-2A9F-3C81-9186-11A7B6B03B3F}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
