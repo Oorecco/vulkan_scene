@@ -164,8 +164,11 @@ bool Game::createWindow(HINSTANCE hInst) {
 
 bool Game::initRenderer() {
     try {
-        ResEntry res = m_settings.Res();
-        m_renderer.init(m_hwnd, res.w, res.h, m_settings.VSync(), m_settings.VkVerIdx());
+        RECT cr{};
+        GetClientRect(m_hwnd, &cr);
+        uint32_t w = std::max(1L, cr.right - cr.left);
+        uint32_t h = std::max(1L, cr.bottom - cr.top);
+        m_renderer.init(m_hwnd, w, h, m_settings.VSync(), m_settings.VkVerIdx());
         return true;
     } catch (const std::exception& e) {
         MessageBoxA(m_hwnd, e.what(), "Fatal: Vulkan init failed", MB_OK | MB_ICONERROR);
@@ -406,13 +409,29 @@ void Game::update(float dt) {
     bool simRunning = (m_appState == AppState::Playing
                        && !m_paused && !m_alert.active && !m_effects.freezeTime);
     if (simRunning) {
-        m_simTime += dt;
-        m_dayNight.update(dt);
-        simUpdate(dt);
-        updateEffects(dt);
-        updateCrates(dt);
-        m_cursedObjs.update(dt, m_player.pos, m_dayNight, m_effects.diamondPulse);
-        m_shop.update(dt, m_player.pos, m_dayNight, diamondsUnlocked(), diamonds());
+        constexpr float PHYS_DT = 1.0f / 60.0f;
+        m_physAccum = std::min(m_physAccum + dt, PHYS_DT * 6.0f);
+        int physSteps = 0;
+        while (m_physAccum >= PHYS_DT && physSteps < 4) {
+            auto ps0 = std::chrono::high_resolution_clock::now();
+            m_simTime += PHYS_DT;
+            m_dayNight.update(PHYS_DT);
+            simUpdate(PHYS_DT);
+            updateEffects(PHYS_DT);
+            updateCrates(PHYS_DT);
+            m_cursedObjs.update(PHYS_DT, m_player.pos, m_dayNight, m_effects.diamondPulse);
+            m_shop.update(PHYS_DT, m_player.pos, m_dayNight, diamondsUnlocked(), diamonds());
+            auto ps1 = std::chrono::high_resolution_clock::now();
+            m_lastPhysStepMs = std::chrono::duration<float, std::milli>(ps1 - ps0).count();
+            m_physAccum -= PHYS_DT;
+            physSteps++;
+        }
+        if (physSteps == 4 && m_physAccum > PHYS_DT * 2.0f) {
+            // If we fall too far behind, drop extra accumulated time and recover.
+            m_physAccum = PHYS_DT;
+        }
+    } else {
+        m_physAccum = 0.0f;
     }
     m_effects.update(dt);
     updateNotYourFault(dt);
@@ -801,6 +820,18 @@ void Game::onFocusLost() {
     }
 }
 void Game::onFocusGained() {
+    if (m_hiddenForFocusLoss) {
+        ShowWindow(m_hwnd, IsIconic(m_hwnd) ? SW_RESTORE : SW_SHOW);
+        SetForegroundWindow(m_hwnd);
+        if (m_settings.WMode() == WinMode::Fullscreen || m_settings.WMode() == WinMode::Borderless) {
+            int sw = GetSystemMetrics(SM_CXSCREEN), sh = GetSystemMetrics(SM_CYSCREEN);
+            HWND z = (m_settings.WMode() == WinMode::Fullscreen) ? HWND_TOPMOST : HWND_NOTOPMOST;
+            SetWindowPos(m_hwnd, z, 0, 0, sw, sh,
+                         SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+            m_renderer.resize((uint32_t)sw, (uint32_t)sh);
+        }
+        m_hiddenForFocusLoss = false;
+    }
     if (m_minimised) return; // WM_SIZE will follow — don't capture yet
     if (m_hiddenForFocusLoss) {
         ShowWindow(m_hwnd, SW_SHOW);
@@ -871,8 +902,10 @@ void Game::applySettings() {
 
     SetWindowLongA(m_hwnd, GWL_STYLE,   style);
     SetWindowLongA(m_hwnd, GWL_EXSTYLE, exStyle);
+    HWND zOrder = HWND_NOTOPMOST;
+    if (wm == WinMode::Fullscreen) zOrder = HWND_TOPMOST;
     SetWindowPos(m_hwnd,
-        (wm == WinMode::Windowed) ? HWND_NOTOPMOST : HWND_TOPMOST,
+        zOrder,
         x, y, w, h,
         SWP_FRAMECHANGED | SWP_SHOWWINDOW);
 
@@ -1508,7 +1541,7 @@ void Game::drawDebug(UIBatch& b) {
     float tx=PX+PAD,ty=PY+5; char buf[200];
     b.str(tx,ty,SC,"[ DEBUG v0.07 | ` = console ]",.25f,.60f,1.f,1.f); ty+=LH;
     b.rect(tx,ty,PW-PAD*2,1,.05f,.12f,.30f,1.f); ty+=LH;
-    snprintf(buf,sizeof(buf),"FPS:%.1f  CPU:%.2fms",m_fps,m_cpuMs); b.str(tx,ty,SC,buf,.22f,.65f,1.f,1.f); ty+=LH;
+    snprintf(buf,sizeof(buf),"FPS:%.1f  CPU:%.2fms  PhysStep:%.3fms",m_fps,m_cpuMs,m_lastPhysStepMs); b.str(tx,ty,SC,buf,.22f,.65f,1.f,1.f); ty+=LH;
     snprintf(buf,sizeof(buf),"Pos: %+.2f %+.2f %+.2f",m_player.pos.x,m_player.pos.y,m_player.pos.z); b.str(tx,ty,SC,buf,.22f,.70f,1.f,1.f); ty+=LH;
     const char* ms2=m_player.moveState==PMoveState::Idle?"IDLE":m_player.moveState==PMoveState::Walking?"WALK":"SPRINT";
     snprintf(buf,sizeof(buf),"Move:%s  E:%.0f  Gnd:%d  SpeedX:%.1f",ms2,m_player.energy,(int)m_player.onGround,m_effects.speedBoost?m_effects.speedBoostMult:1.f);
@@ -1521,7 +1554,7 @@ void Game::drawDebug(UIBatch& b) {
     int ac=(int)std::count_if(m_crates.crates().begin(),m_crates.crates().end(),[](const WorldCrate& c){return c.active;});
     snprintf(buf,sizeof(buf),"Crates:%d  Dec drawn:%d culled:%d",ac,m_decorations.drawnCount(),m_decorations.culledCount()); b.str(tx,ty,SC,buf,.20f,.60f,.95f,1.f); ty+=LH;
     snprintf(buf,sizeof(buf),"Ambient:%.2f  Sun:%.2f  Gamma:%.1f",m_settings.AmbientLevel(),m_settings.SunIntensity(),m_settings.Gamma()); b.str(tx,ty,SC,buf,.9f,.85f,.4f,1.f); ty+=LH;
-    snprintf(buf,sizeof(buf),"Cap:%d  Min:%d  FS:%d  SimT:%.1f",(int)m_capMouse,(int)m_minimised,(int)m_fullscreen,m_simTime); b.str(tx,ty,SC,buf,.5f,.5f,.6f,1.f); ty+=LH;
+    snprintf(buf,sizeof(buf),"Cap:%d  Min:%d  FS:%d  SimT:%.1f  Acc:%.3f",(int)m_capMouse,(int)m_minimised,(int)m_fullscreen,m_simTime,m_physAccum); b.str(tx,ty,SC,buf,.5f,.5f,.6f,1.f); ty+=LH;
     if(m_items.hasItem()){snprintf(buf,sizeof(buf),"Held:%s",ItemSystem::getDef(m_items.heldItem.type)->name);b.str(tx,ty,SC,buf,1.f,.7f,.3f,1.f);ty+=LH;}
     if(m_notFault.active){snprintf(buf,sizeof(buf),"IT'S NOT YOUR FAULT t=%.1f ending:%d",m_notFault.timer,(int)m_notFault.ending);b.str(tx,ty,SC,buf,1.f,.2f,.2f,1.f);}
 }
@@ -1769,7 +1802,8 @@ void Game::drawDebugRender(UIBatch& b) {
     b.rect(tx, ty, PW - PAD*2.f, 1.f, .12f,.18f,.40f,1.f); ty += LH;
 
     // Frame timing
-    snprintf(buf, sizeof(buf), "FPS: %.1f   CPU: %.2f ms", m_fps, m_cpuMs);
+    snprintf(buf, sizeof(buf), "FPS: %.1f   CPU: %.2f ms   PhysStep: %.3f ms",
+             m_fps, m_cpuMs, m_lastPhysStepMs);
     b.str(tx,ty,SC,buf,.90f,.75f,.30f,1.f); ty+=LH;
 
     // Resolution + FOV (screen, not swapchain internals)
