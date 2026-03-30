@@ -62,7 +62,7 @@ public:
     bool handleKey(WPARAM vk);
 
     bool isOpen()   const { return m_open; }
-    void toggle()         { m_open = !m_open; m_inputBuf[0] = '\0'; m_inputLen = 0; }
+    void toggle()         { m_open = !m_open; m_inputBuf[0] = '\0'; m_inputLen = 0; m_cursorPos = 0; m_inputActive = false; }
     void close()          { m_open = false; }
 
     // ── Draw (called from Game's UI draw path) ────────────────────────────
@@ -86,6 +86,8 @@ private:
 
     char  m_inputBuf[MAX_INPUT] = {};
     int   m_inputLen = 0;
+    int   m_cursorPos = 0;
+    bool  m_inputActive = false;
     int   m_scrollOffset = 0; // lines scrolled up from bottom
     int   m_historyIdx   = -1;
     std::vector<std::string> m_history; // command history (up arrow)

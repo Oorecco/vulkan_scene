@@ -968,8 +968,23 @@ void Game::onMouseClick(bool right) {
 void Game::onKeyDown(WPARAM vk) {
     bool shift = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
 
-    // Console eats all input when open (Shift+F4 toggles — see F4 block below)
-    if (m_console.isOpen()) { m_console.handleKey(vk); return; }
+    // Shift+F4 must always toggle, even when console is already open.
+    if (vk == VK_F4 && shift && !m_kF4) {
+        m_kF4 = true;
+        m_console.toggle();
+        if (m_console.isOpen()) setCap(false);
+        else if (m_appState == AppState::Playing && !m_paused && !m_alert.active) setCap(true);
+        return;
+    }
+
+    // Console eats most input when open.
+    if (m_console.isOpen()) {
+        m_console.handleKey(vk);
+        if (!m_console.isOpen()
+            && m_appState == AppState::Playing && !m_paused && !m_alert.active)
+            setCap(true);
+        return;
+    }
 
     // Alert intercept — works from every screen state, no exceptions
     if (m_alert.active) {
@@ -1119,14 +1134,7 @@ void Game::onKeyDown(WPARAM vk) {
         m_kF3 = true;
         if (shift) m_showDebugWorld = !m_showDebugWorld;
     }
-    if (vk == VK_F4 && !m_kF4) {
-        m_kF4 = true;
-        if (shift) {
-            m_console.toggle();
-            if (m_console.isOpen()) setCap(false);
-            else if (m_appState == AppState::Playing && !m_paused) setCap(true);
-        }
-    }
+    if (vk == VK_F4 && !m_kF4) m_kF4 = true;
     if (vk == 'P' && shift && !m_kP) {
         m_kP = true;
         if (m_freecam.isActive()) m_freecam.disable();
