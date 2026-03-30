@@ -141,6 +141,7 @@ private:
     int   m_winBaseX   = 0, m_winBaseY = 0;
     bool  m_minimised  = false;  // [FIX] don't try to render while minimised
     bool  m_fullscreen = false;  // [FIX] track actual fullscreen state for restore
+    bool  m_hiddenForFocusLoss = false;
 
     // ── Systems ───────────────────────────────────────────────────────────
     VulkanRenderer    m_renderer;
@@ -220,6 +221,8 @@ private:
     bool  m_pushReady   = false;   // looking at cube and E was pressed
 
     float m_simTime=0.f, m_totalTime=0.f;
+    float m_physAccum=0.f;
+    float m_lastPhysStepMs=0.f;
     float m_fps=0.f, m_cpuMs=0.f;
     int   m_frameN=0; float m_fpsAcc=0.f;
     float m_saveTimer=0.f;

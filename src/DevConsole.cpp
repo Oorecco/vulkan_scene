@@ -63,35 +63,62 @@ void DevConsole::error (const std::string& m,float ts){addEntry(ConLevel::Error,
 // ── Input ─────────────────────────────────────────────────────────────────
 bool DevConsole::handleChar(char c) {
     if (!m_open) return false;
+    if (!m_inputActive) return true;
     if (c >= 32 && c < 127 && m_inputLen < MAX_INPUT-1) {
-        m_inputBuf[m_inputLen++] = c;
-        m_inputBuf[m_inputLen]   = '\0';
+        for (int i = m_inputLen; i >= m_cursorPos; --i) m_inputBuf[i+1] = m_inputBuf[i];
+        m_inputBuf[m_cursorPos++] = c;
+        m_inputLen++;
     }
     return true;
 }
 
 bool DevConsole::handleKey(WPARAM vk) {
     if (!m_open) return false;
+    if (!m_inputActive) {
+        if (vk == VK_RETURN) { m_inputActive = true; return true; }
+        if (vk == VK_ESCAPE) { close(); return true; }
+        if (vk == VK_PRIOR) { m_scrollOffset += 3; return true; }
+        if (vk == VK_NEXT)  { m_scrollOffset = std::max(0,m_scrollOffset-3); return true; }
+        return true;
+    }
     if (vk == VK_RETURN) {
         submitInput(); return true;
     }
-    if (vk == VK_BACK && m_inputLen > 0) {
-        m_inputBuf[--m_inputLen] = '\0'; return true;
+    if (vk == VK_BACK && m_cursorPos > 0) {
+        for (int i = m_cursorPos - 1; i < m_inputLen; ++i) m_inputBuf[i] = m_inputBuf[i+1];
+        m_cursorPos--;
+        m_inputLen--;
+        return true;
     }
+    if (vk == VK_DELETE && m_cursorPos < m_inputLen) {
+        for (int i = m_cursorPos; i < m_inputLen; ++i) m_inputBuf[i] = m_inputBuf[i+1];
+        m_inputLen--;
+        return true;
+    }
+    if (vk == VK_LEFT) {
+        m_cursorPos = std::max(0, m_cursorPos - 1); return true;
+    }
+    if (vk == VK_RIGHT) {
+        m_cursorPos = std::min(m_inputLen, m_cursorPos + 1); return true;
+    }
+    if (vk == VK_HOME) { m_cursorPos = 0; return true; }
+    if (vk == VK_END)  { m_cursorPos = m_inputLen; return true; }
     if (vk == VK_ESCAPE) {
-        close(); return true;
+        m_inputActive = false; return true;
     }
     if (vk == VK_UP && !m_history.empty()) {
         m_historyIdx = std::min((int)m_history.size()-1, m_historyIdx+1);
         std::string h=m_history[m_history.size()-1-m_historyIdx];
         strncpy_s(m_inputBuf,sizeof(m_inputBuf),h.c_str(),_TRUNCATE);
         m_inputLen=(int)strlen(m_inputBuf);
+        m_cursorPos = m_inputLen;
         return true;
     }
     if (vk == VK_DOWN) {
         m_historyIdx=std::max(-1,m_historyIdx-1);
         if(m_historyIdx<0){m_inputBuf[0]='\0';m_inputLen=0;}
         else{std::string h=m_history[m_history.size()-1-m_historyIdx];strncpy_s(m_inputBuf,sizeof(m_inputBuf),h.c_str(),_TRUNCATE);m_inputLen=(int)strlen(m_inputBuf);}
+        m_cursorPos = m_inputLen;
         return true;
     }
     if (vk == VK_PRIOR) { m_scrollOffset += 3; return true; } // Page up
@@ -107,6 +134,7 @@ bool DevConsole::handleKey(WPARAM vk) {
             int idx=m_tabCycle%=(int)matches.size();
             strncpy_s(m_inputBuf,sizeof(m_inputBuf),matches[idx].c_str(),_TRUNCATE);
             m_inputLen=(int)strlen(m_inputBuf);
+            m_cursorPos = m_inputLen;
             m_tabCycle++;
         }
         return true;
@@ -117,7 +145,7 @@ bool DevConsole::handleKey(WPARAM vk) {
 
 void DevConsole::submitInput() {
     std::string input = trim(std::string(m_inputBuf));
-    m_inputBuf[0]='\0'; m_inputLen=0; m_historyIdx=-1;
+    m_inputBuf[0]='\0'; m_inputLen=0; m_cursorPos=0; m_historyIdx=-1;
     if (input.empty()) return;
     m_history.push_back(input);
     if ((int)m_history.size()>64) m_history.erase(m_history.begin());
@@ -239,7 +267,8 @@ void DevConsole::draw(UIBatch& b, uint32_t W, uint32_t H, float /*ts*/) {
     // Title
     const char* title = "[ DEVELOPER CONSOLE ]";
     b.str(6, consY+4, 1.2f, title, 0.28f, 0.72f, 1.0f, 0.9f);
-    b.str(CW - b.strW(1.1f,"ESC=close")-6, consY+5, 1.1f, "ESC=close", 0.4f,0.4f,0.5f,0.6f);
+    const char* hdrHint = m_inputActive ? "ESC=unfocus" : "Enter=focus";
+    b.str(CW - b.strW(1.1f,hdrHint)-6, consY+5, 1.1f, hdrHint, 0.4f,0.4f,0.5f,0.6f);
 
     // Log area
     const float LH = 13.f, SC = 1.0f, PAD = 4.f;
@@ -282,8 +311,9 @@ void DevConsole::draw(UIBatch& b, uint32_t W, uint32_t H, float /*ts*/) {
     // Input text
     b.str(18, iy+5, 1.3f, m_inputBuf, 0.9f, 0.9f, 0.95f, 1.0f);
     // Blinking cursor
-    float cursorX = 18 + b.strW(1.3f, m_inputBuf);
+    std::string leftText(m_inputBuf, m_inputBuf + std::min(m_cursorPos, m_inputLen));
+    float cursorX = 18 + b.strW(1.3f, leftText.c_str());
     float blink = fmodf((float)GetTickCount64() / 1000.0f, 1.0f);
-    if (blink < 0.5f)
+    if (blink < 0.5f && m_inputActive)
         b.rect(cursorX, iy+5, 1.5f, GLYPH_PX*1.3f, 0.8f, 0.9f, 1.0f, 0.85f);
 }
