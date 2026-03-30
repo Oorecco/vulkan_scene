@@ -13,8 +13,12 @@ static Frustum buildFrustum(const glm::mat4& vp) {
     f.planes[1] = m[3] - m[0]; // right
     f.planes[2] = m[3] + m[1]; // bottom
     f.planes[3] = m[3] - m[1]; // top
-    f.planes[4] = m[2];         // near
+    f.planes[4] = m[3] + m[2]; // near
     f.planes[5] = m[3] - m[2]; // far
+    for (auto& p : f.planes) {
+        float len = glm::length(glm::vec3(p));
+        if (len > 1e-5f) p /= len;
+    }
     return f;
 }
 

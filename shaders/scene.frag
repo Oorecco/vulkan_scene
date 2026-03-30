@@ -27,7 +27,8 @@ layout(location = 4) in vec2 fragUV;
 layout(location = 0) out vec4 outColor;
 
 // 5x5 PCF kernel — 25 samples for soft shadows
-float shadowPCF(vec4 shadowCoord) {
+float shadowPCF(vec4 shadowCoord, vec3 N, vec3 L) {
+    if (shadowCoord.w <= 0.0) return 1.0;
     vec3 projCoord = shadowCoord.xyz / shadowCoord.w;
     projCoord.xy   = projCoord.xy * 0.5 + 0.5;
 
@@ -38,7 +39,8 @@ float shadowPCF(vec4 shadowCoord) {
         return 1.0;
 
     float shadow    = 0.0;
-    float bias      = 0.002;
+    float NdL       = max(dot(N, L), 0.0);
+    float bias      = max(0.00035 * (1.0 - NdL), 0.00008);
     vec2  texelSize = 1.0 / textureSize(shadowMap, 0);
 
     for (int dy = -2; dy <= 2; dy++) {
@@ -73,7 +75,7 @@ void main() {
     vec3  V    = normalize(ubo.camPos.xyz - fragPosWorld);
     vec3  H    = normalize(L + V);
     float spec = pow(max(dot(N, H), 0.0), 48.0) * 0.15;
-    float shadow = shadowPCF(fragShadowCoord);
+    float shadow = shadowPCF(fragShadowCoord, N, L);
 
     vec3 col = amb + shadow * (baseColor * NdL + vec3(spec));
 
