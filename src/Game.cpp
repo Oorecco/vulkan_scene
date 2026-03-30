@@ -129,18 +129,33 @@ bool Game::createWindow(HINSTANCE hInst) {
     wc.lpszClassName = "VkScene07";
     RegisterClassExA(&wc);
 
-    ResEntry res    = m_settings.Res();
-    DWORD    style  = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
-    RECT     wr     = { 0, 0, (LONG)res.w, (LONG)res.h };
-    AdjustWindowRect(&wr, style, FALSE);
+    ResEntry res = m_settings.Res();
+    WinMode wm   = m_settings.WMode();
+    int sw = GetSystemMetrics(SM_CXSCREEN), sh = GetSystemMetrics(SM_CYSCREEN);
 
-    int windowW = wr.right - wr.left;
-    int windowH = wr.bottom - wr.top;
-    m_winBaseX  = (GetSystemMetrics(SM_CXSCREEN) - windowW) / 2;
-    m_winBaseY  = (GetSystemMetrics(SM_CYSCREEN) - windowH) / 2;
+    DWORD style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+    int windowW = (int)res.w, windowH = (int)res.h;
+    int windowX = 0, windowY = 0;
 
-    m_hwnd = CreateWindowExA(0, "VkScene07", "Vulkan 1.1+ Scene  v0.07-alpha",
-        style, m_winBaseX, m_winBaseY, windowW, windowH,
+    if (wm == WinMode::Windowed) {
+        RECT wr = { 0, 0, (LONG)res.w, (LONG)res.h };
+        AdjustWindowRect(&wr, style, FALSE);
+        windowW = wr.right - wr.left;
+        windowH = wr.bottom - wr.top;
+        windowX = (sw - windowW) / 2;
+        windowY = (sh - windowH) / 2;
+        m_fullscreen = false;
+    } else {
+        style = WS_POPUP;
+        windowW = sw; windowH = sh;
+        windowX = 0;  windowY = 0;
+        m_fullscreen = true;
+    }
+
+    m_winBaseX = windowX;
+    m_winBaseY = windowY;
+    m_hwnd = CreateWindowExA(0, "VkScene07", "Vulkan 1.1+ Scene v0.01-alpha",
+        style, windowX, windowY, windowW, windowH,
         nullptr, nullptr, hInst, nullptr);
     if (!m_hwnd) { LOG_ERR("CreateWindow failed"); return false; }
     ShowWindow(m_hwnd, SW_SHOW);
@@ -149,8 +164,11 @@ bool Game::createWindow(HINSTANCE hInst) {
 
 bool Game::initRenderer() {
     try {
-        ResEntry res = m_settings.Res();
-        m_renderer.init(m_hwnd, res.w, res.h, m_settings.VSync(), m_settings.VkVerIdx());
+        RECT cr{};
+        GetClientRect(m_hwnd, &cr);
+        uint32_t w = std::max(1L, cr.right - cr.left);
+        uint32_t h = std::max(1L, cr.bottom - cr.top);
+        m_renderer.init(m_hwnd, w, h, m_settings.VSync(), m_settings.VkVerIdx());
         return true;
     } catch (const std::exception& e) {
         MessageBoxA(m_hwnd, e.what(), "Fatal: Vulkan init failed", MB_OK | MB_ICONERROR);
@@ -391,13 +409,29 @@ void Game::update(float dt) {
     bool simRunning = (m_appState == AppState::Playing
                        && !m_paused && !m_alert.active && !m_effects.freezeTime);
     if (simRunning) {
-        m_simTime += dt;
-        m_dayNight.update(dt);
-        simUpdate(dt);
-        updateEffects(dt);
-        updateCrates(dt);
-        m_cursedObjs.update(dt, m_player.pos, m_dayNight, m_effects.diamondPulse);
-        m_shop.update(dt, m_player.pos, m_dayNight, diamondsUnlocked(), diamonds());
+        constexpr float PHYS_DT = 1.0f / 60.0f;
+        m_physAccum = std::min(m_physAccum + dt, PHYS_DT * 6.0f);
+        int physSteps = 0;
+        while (m_physAccum >= PHYS_DT && physSteps < 4) {
+            auto ps0 = std::chrono::high_resolution_clock::now();
+            m_simTime += PHYS_DT;
+            m_dayNight.update(PHYS_DT);
+            simUpdate(PHYS_DT);
+            updateEffects(PHYS_DT);
+            updateCrates(PHYS_DT);
+            m_cursedObjs.update(PHYS_DT, m_player.pos, m_dayNight, m_effects.diamondPulse);
+            m_shop.update(PHYS_DT, m_player.pos, m_dayNight, diamondsUnlocked(), diamonds());
+            auto ps1 = std::chrono::high_resolution_clock::now();
+            m_lastPhysStepMs = std::chrono::duration<float, std::milli>(ps1 - ps0).count();
+            m_physAccum -= PHYS_DT;
+            physSteps++;
+        }
+        if (physSteps == 4 && m_physAccum > PHYS_DT * 2.0f) {
+            // If we fall too far behind, drop extra accumulated time and recover.
+            m_physAccum = PHYS_DT;
+        }
+    } else {
+        m_physAccum = 0.0f;
     }
     m_effects.update(dt);
     updateNotYourFault(dt);
@@ -520,8 +554,8 @@ void Game::simUpdate(float dt) {
     // Update swing charge: E held while looking at pushable cube
     if (m_pushReady && m_lookingPC && !m_cube.grabbed) {
         m_pushCharge = std::min(1.0f, m_pushCharge + dt / 1.4f); // 1.4s to full charge
-    } else if (!m_pushReady) {
-        m_pushCharge = 0.0f; // reset if not holding
+    } else {
+        m_pushCharge = 0.0f; // reset when not actively charging
     }
     // Ray-AABB slab test: is the player looking at the physics cube?
     {
@@ -609,6 +643,15 @@ void Game::resolveCollisions() {
         float dir = (relZ >= 0.f) ? 1.f : -1.f, half = (oz + SEP) * 0.5f;
         m_player.pos.z  += dir * half; m_cube.pos.z -= dir * half;
         m_cube.angVel.x += dir * std::min(std::abs(m_player.vel.z), 6.f) * 0.4f;
+    }
+
+    // Standing support tolerance to reduce onGround flicker on cube tops.
+    float playerFeet = m_player.pos.y - CAP_HALF_H;
+    float cubeTop    = m_cube.pos.y + ext.y;
+    bool aboveTop    = playerFeet >= cubeTop - 0.06f && playerFeet <= cubeTop + 0.14f;
+    if (aboveTop && std::abs(m_player.vel.y) < 2.0f) {
+        m_player.onGround = true;
+        m_player.pos.y = std::max(m_player.pos.y, cubeTop + CAP_HALF_H);
     }
 }
 
@@ -767,11 +810,28 @@ void Game::recenterCursor() {
 }
 void Game::onFocusLost() {
     setCap(false); // unconditional — no ghost cursor left behind
+    if ((m_settings.WMode() == WinMode::Fullscreen || m_settings.WMode() == WinMode::Borderless)
+        && !m_hiddenForFocusLoss) {
+        ShowWindow(m_hwnd, SW_HIDE);
+        m_hiddenForFocusLoss = true;
+    }
     if (m_settings.PauseFocus() && m_appState == AppState::Playing && !m_paused) {
         m_paused = true; m_uiScreen = UIScreen::PauseMenu; m_pauseSel = 0;
     }
 }
 void Game::onFocusGained() {
+    if (m_hiddenForFocusLoss) {
+        ShowWindow(m_hwnd, IsIconic(m_hwnd) ? SW_RESTORE : SW_SHOW);
+        SetForegroundWindow(m_hwnd);
+        if (m_settings.WMode() == WinMode::Fullscreen || m_settings.WMode() == WinMode::Borderless) {
+            int sw = GetSystemMetrics(SM_CXSCREEN), sh = GetSystemMetrics(SM_CYSCREEN);
+            HWND z = (m_settings.WMode() == WinMode::Fullscreen) ? HWND_TOPMOST : HWND_NOTOPMOST;
+            SetWindowPos(m_hwnd, z, 0, 0, sw, sh,
+                         SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+            m_renderer.resize((uint32_t)sw, (uint32_t)sh);
+        }
+        m_hiddenForFocusLoss = false;
+    }
     if (m_minimised) return; // WM_SIZE will follow — don't capture yet
     if (m_appState == AppState::Playing && !m_paused
         && !m_alert.active && !m_console.isOpen())
@@ -807,6 +867,7 @@ void Game::applySettings() {
     DWORD style = 0;
     DWORD exStyle = 0;
     int   x=0, y=0, w=(int)res.w, h=(int)res.h;
+    uint32_t renderW = res.w, renderH = res.h;
     int   sw = GetSystemMetrics(SM_CXSCREEN), sh = GetSystemMetrics(SM_CYSCREEN);
 
     if (wm == WinMode::Windowed) {
@@ -828,19 +889,23 @@ void Game::applySettings() {
             // Fullscreen: same as borderless for simplicity; Vulkan handles exclusive fullscreen
             x=0; y=0; w=sw; h=sh;
         }
+        renderW = (uint32_t)w;
+        renderH = (uint32_t)h;
         m_winBaseX = 0; m_winBaseY = 0;
         m_fullscreen = (wm == WinMode::Fullscreen || wm == WinMode::Borderless);
     }
 
     SetWindowLongA(m_hwnd, GWL_STYLE,   style);
     SetWindowLongA(m_hwnd, GWL_EXSTYLE, exStyle);
+    HWND zOrder = HWND_NOTOPMOST;
+    if (wm == WinMode::Fullscreen) zOrder = HWND_TOPMOST;
     SetWindowPos(m_hwnd,
-        (wm == WinMode::Windowed) ? HWND_NOTOPMOST : HWND_TOPMOST,
+        zOrder,
         x, y, w, h,
         SWP_FRAMECHANGED | SWP_SHOWWINDOW);
 
     // Trigger swapchain recreation at new resolution
-    m_renderer.resize((uint32_t)res.w, (uint32_t)res.h);
+    m_renderer.resize(renderW, renderH);
 
     m_uiScreen = m_paused ? UIScreen::PauseMenu : UIScreen::None;
 }
@@ -1471,7 +1536,7 @@ void Game::drawDebug(UIBatch& b) {
     float tx=PX+PAD,ty=PY+5; char buf[200];
     b.str(tx,ty,SC,"[ DEBUG v0.07 | ` = console ]",.25f,.60f,1.f,1.f); ty+=LH;
     b.rect(tx,ty,PW-PAD*2,1,.05f,.12f,.30f,1.f); ty+=LH;
-    snprintf(buf,sizeof(buf),"FPS:%.1f  CPU:%.2fms",m_fps,m_cpuMs); b.str(tx,ty,SC,buf,.22f,.65f,1.f,1.f); ty+=LH;
+    snprintf(buf,sizeof(buf),"FPS:%.1f  CPU:%.2fms  PhysStep:%.3fms",m_fps,m_cpuMs,m_lastPhysStepMs); b.str(tx,ty,SC,buf,.22f,.65f,1.f,1.f); ty+=LH;
     snprintf(buf,sizeof(buf),"Pos: %+.2f %+.2f %+.2f",m_player.pos.x,m_player.pos.y,m_player.pos.z); b.str(tx,ty,SC,buf,.22f,.70f,1.f,1.f); ty+=LH;
     const char* ms2=m_player.moveState==PMoveState::Idle?"IDLE":m_player.moveState==PMoveState::Walking?"WALK":"SPRINT";
     snprintf(buf,sizeof(buf),"Move:%s  E:%.0f  Gnd:%d  SpeedX:%.1f",ms2,m_player.energy,(int)m_player.onGround,m_effects.speedBoost?m_effects.speedBoostMult:1.f);
@@ -1484,7 +1549,7 @@ void Game::drawDebug(UIBatch& b) {
     int ac=(int)std::count_if(m_crates.crates().begin(),m_crates.crates().end(),[](const WorldCrate& c){return c.active;});
     snprintf(buf,sizeof(buf),"Crates:%d  Dec drawn:%d culled:%d",ac,m_decorations.drawnCount(),m_decorations.culledCount()); b.str(tx,ty,SC,buf,.20f,.60f,.95f,1.f); ty+=LH;
     snprintf(buf,sizeof(buf),"Ambient:%.2f  Sun:%.2f  Gamma:%.1f",m_settings.AmbientLevel(),m_settings.SunIntensity(),m_settings.Gamma()); b.str(tx,ty,SC,buf,.9f,.85f,.4f,1.f); ty+=LH;
-    snprintf(buf,sizeof(buf),"Cap:%d  Min:%d  FS:%d  SimT:%.1f",(int)m_capMouse,(int)m_minimised,(int)m_fullscreen,m_simTime); b.str(tx,ty,SC,buf,.5f,.5f,.6f,1.f); ty+=LH;
+    snprintf(buf,sizeof(buf),"Cap:%d  Min:%d  FS:%d  SimT:%.1f  Acc:%.3f",(int)m_capMouse,(int)m_minimised,(int)m_fullscreen,m_simTime,m_physAccum); b.str(tx,ty,SC,buf,.5f,.5f,.6f,1.f); ty+=LH;
     if(m_items.hasItem()){snprintf(buf,sizeof(buf),"Held:%s",ItemSystem::getDef(m_items.heldItem.type)->name);b.str(tx,ty,SC,buf,1.f,.7f,.3f,1.f);ty+=LH;}
     if(m_notFault.active){snprintf(buf,sizeof(buf),"IT'S NOT YOUR FAULT t=%.1f ending:%d",m_notFault.timer,(int)m_notFault.ending);b.str(tx,ty,SC,buf,1.f,.2f,.2f,1.f);}
 }
@@ -1732,7 +1797,8 @@ void Game::drawDebugRender(UIBatch& b) {
     b.rect(tx, ty, PW - PAD*2.f, 1.f, .12f,.18f,.40f,1.f); ty += LH;
 
     // Frame timing
-    snprintf(buf, sizeof(buf), "FPS: %.1f   CPU: %.2f ms", m_fps, m_cpuMs);
+    snprintf(buf, sizeof(buf), "FPS: %.1f   CPU: %.2f ms   PhysStep: %.3f ms",
+             m_fps, m_cpuMs, m_lastPhysStepMs);
     b.str(tx,ty,SC,buf,.90f,.75f,.30f,1.f); ty+=LH;
 
     // Resolution + FOV (screen, not swapchain internals)
