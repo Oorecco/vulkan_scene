@@ -805,6 +805,15 @@ void Game::onFocusGained() {
     if (m_hiddenForFocusLoss) {
         ShowWindow(m_hwnd, SW_SHOW);
         SetForegroundWindow(m_hwnd);
+        // Re-assert window mode after alt-tab/focus restore.
+        if (m_settings.WMode() != WinMode::Windowed) {
+            int sw = GetSystemMetrics(SM_CXSCREEN), sh = GetSystemMetrics(SM_CYSCREEN);
+            SetWindowLongA(m_hwnd, GWL_STYLE, WS_POPUP);
+            SetWindowLongA(m_hwnd, GWL_EXSTYLE, 0);
+            SetWindowPos(m_hwnd, HWND_TOPMOST, 0, 0, sw, sh,
+                         SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+            m_renderer.resize((uint32_t)sw, (uint32_t)sh);
+        }
         m_hiddenForFocusLoss = false;
     }
     if (m_appState == AppState::Playing && !m_paused
@@ -936,7 +945,13 @@ void Game::onKeyDown(WPARAM vk) {
     bool shift = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
 
     // Console eats all input when open (Shift+F4 toggles — see F4 block below)
-    if (m_console.isOpen()) { m_console.handleKey(vk); return; }
+    if (m_console.isOpen()) {
+        m_console.handleKey(vk);
+        // If console just got closed (Esc or internal close cmd), restore capture.
+        if (!m_console.isOpen() && m_appState == AppState::Playing && !m_paused && !m_alert.active)
+            setCap(true);
+        return;
+    }
 
     // Alert intercept — works from every screen state, no exceptions
     if (m_alert.active) {
