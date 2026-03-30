@@ -129,18 +129,33 @@ bool Game::createWindow(HINSTANCE hInst) {
     wc.lpszClassName = "VkScene07";
     RegisterClassExA(&wc);
 
-    ResEntry res    = m_settings.Res();
-    DWORD    style  = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
-    RECT     wr     = { 0, 0, (LONG)res.w, (LONG)res.h };
-    AdjustWindowRect(&wr, style, FALSE);
+    ResEntry res = m_settings.Res();
+    WinMode wm   = m_settings.WMode();
+    int sw = GetSystemMetrics(SM_CXSCREEN), sh = GetSystemMetrics(SM_CYSCREEN);
 
-    int windowW = wr.right - wr.left;
-    int windowH = wr.bottom - wr.top;
-    m_winBaseX  = (GetSystemMetrics(SM_CXSCREEN) - windowW) / 2;
-    m_winBaseY  = (GetSystemMetrics(SM_CYSCREEN) - windowH) / 2;
+    DWORD style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+    int windowW = (int)res.w, windowH = (int)res.h;
+    int windowX = 0, windowY = 0;
 
-    m_hwnd = CreateWindowExA(0, "VkScene07", "Vulkan 1.1+ Scene  v0.07-alpha",
-        style, m_winBaseX, m_winBaseY, windowW, windowH,
+    if (wm == WinMode::Windowed) {
+        RECT wr = { 0, 0, (LONG)res.w, (LONG)res.h };
+        AdjustWindowRect(&wr, style, FALSE);
+        windowW = wr.right - wr.left;
+        windowH = wr.bottom - wr.top;
+        windowX = (sw - windowW) / 2;
+        windowY = (sh - windowH) / 2;
+        m_fullscreen = false;
+    } else {
+        style = WS_POPUP;
+        windowW = sw; windowH = sh;
+        windowX = 0;  windowY = 0;
+        m_fullscreen = true;
+    }
+
+    m_winBaseX = windowX;
+    m_winBaseY = windowY;
+    m_hwnd = CreateWindowExA(0, "VkScene07", "Vulkan 1.1+ Scene v0.01-alpha",
+        style, windowX, windowY, windowW, windowH,
         nullptr, nullptr, hInst, nullptr);
     if (!m_hwnd) { LOG_ERR("CreateWindow failed"); return false; }
     ShowWindow(m_hwnd, SW_SHOW);
@@ -520,8 +535,8 @@ void Game::simUpdate(float dt) {
     // Update swing charge: E held while looking at pushable cube
     if (m_pushReady && m_lookingPC && !m_cube.grabbed) {
         m_pushCharge = std::min(1.0f, m_pushCharge + dt / 1.4f); // 1.4s to full charge
-    } else if (!m_pushReady) {
-        m_pushCharge = 0.0f; // reset if not holding
+    } else {
+        m_pushCharge = 0.0f; // reset when not actively charging
     }
     // Ray-AABB slab test: is the player looking at the physics cube?
     {
@@ -609,6 +624,15 @@ void Game::resolveCollisions() {
         float dir = (relZ >= 0.f) ? 1.f : -1.f, half = (oz + SEP) * 0.5f;
         m_player.pos.z  += dir * half; m_cube.pos.z -= dir * half;
         m_cube.angVel.x += dir * std::min(std::abs(m_player.vel.z), 6.f) * 0.4f;
+    }
+
+    // Standing support tolerance to reduce onGround flicker on cube tops.
+    float playerFeet = m_player.pos.y - CAP_HALF_H;
+    float cubeTop    = m_cube.pos.y + ext.y;
+    bool aboveTop    = playerFeet >= cubeTop - 0.06f && playerFeet <= cubeTop + 0.14f;
+    if (aboveTop && std::abs(m_player.vel.y) < 2.0f) {
+        m_player.onGround = true;
+        m_player.pos.y = std::max(m_player.pos.y, cubeTop + CAP_HALF_H);
     }
 }
 
@@ -767,12 +791,31 @@ void Game::recenterCursor() {
 }
 void Game::onFocusLost() {
     setCap(false); // unconditional — no ghost cursor left behind
+    if ((m_settings.WMode() == WinMode::Fullscreen || m_settings.WMode() == WinMode::Borderless)
+        && !m_hiddenForFocusLoss) {
+        ShowWindow(m_hwnd, SW_HIDE);
+        m_hiddenForFocusLoss = true;
+    }
     if (m_settings.PauseFocus() && m_appState == AppState::Playing && !m_paused) {
         m_paused = true; m_uiScreen = UIScreen::PauseMenu; m_pauseSel = 0;
     }
 }
 void Game::onFocusGained() {
     if (m_minimised) return; // WM_SIZE will follow — don't capture yet
+    if (m_hiddenForFocusLoss) {
+        ShowWindow(m_hwnd, SW_SHOW);
+        SetForegroundWindow(m_hwnd);
+        // Re-assert window mode after alt-tab/focus restore.
+        if (m_settings.WMode() != WinMode::Windowed) {
+            int sw = GetSystemMetrics(SM_CXSCREEN), sh = GetSystemMetrics(SM_CYSCREEN);
+            SetWindowLongA(m_hwnd, GWL_STYLE, WS_POPUP);
+            SetWindowLongA(m_hwnd, GWL_EXSTYLE, 0);
+            SetWindowPos(m_hwnd, HWND_TOPMOST, 0, 0, sw, sh,
+                         SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+            m_renderer.resize((uint32_t)sw, (uint32_t)sh);
+        }
+        m_hiddenForFocusLoss = false;
+    }
     if (m_appState == AppState::Playing && !m_paused
         && !m_alert.active && !m_console.isOpen())
         setCap(true);
@@ -807,6 +850,7 @@ void Game::applySettings() {
     DWORD style = 0;
     DWORD exStyle = 0;
     int   x=0, y=0, w=(int)res.w, h=(int)res.h;
+    uint32_t renderW = res.w, renderH = res.h;
     int   sw = GetSystemMetrics(SM_CXSCREEN), sh = GetSystemMetrics(SM_CYSCREEN);
 
     if (wm == WinMode::Windowed) {
@@ -828,6 +872,8 @@ void Game::applySettings() {
             // Fullscreen: same as borderless for simplicity; Vulkan handles exclusive fullscreen
             x=0; y=0; w=sw; h=sh;
         }
+        renderW = (uint32_t)w;
+        renderH = (uint32_t)h;
         m_winBaseX = 0; m_winBaseY = 0;
         m_fullscreen = (wm == WinMode::Fullscreen || wm == WinMode::Borderless);
     }
@@ -840,7 +886,7 @@ void Game::applySettings() {
         SWP_FRAMECHANGED | SWP_SHOWWINDOW);
 
     // Trigger swapchain recreation at new resolution
-    m_renderer.resize((uint32_t)res.w, (uint32_t)res.h);
+    m_renderer.resize(renderW, renderH);
 
     m_uiScreen = m_paused ? UIScreen::PauseMenu : UIScreen::None;
 }
@@ -899,7 +945,13 @@ void Game::onKeyDown(WPARAM vk) {
     bool shift = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
 
     // Console eats all input when open (Shift+F4 toggles — see F4 block below)
-    if (m_console.isOpen()) { m_console.handleKey(vk); return; }
+    if (m_console.isOpen()) {
+        m_console.handleKey(vk);
+        // If console just got closed (Esc or internal close cmd), restore capture.
+        if (!m_console.isOpen() && m_appState == AppState::Playing && !m_paused && !m_alert.active)
+            setCap(true);
+        return;
+    }
 
     // Alert intercept — works from every screen state, no exceptions
     if (m_alert.active) {

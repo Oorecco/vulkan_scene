@@ -141,6 +141,7 @@ private:
     int   m_winBaseX   = 0, m_winBaseY = 0;
     bool  m_minimised  = false;  // [FIX] don't try to render while minimised
     bool  m_fullscreen = false;  // [FIX] track actual fullscreen state for restore
+    bool  m_hiddenForFocusLoss = false;
 
     // ── Systems ───────────────────────────────────────────────────────────
     VulkanRenderer    m_renderer;

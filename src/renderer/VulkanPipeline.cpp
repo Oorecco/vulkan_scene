@@ -500,7 +500,9 @@ void VulkanPipeline::createShadowPipeline(VkDevice device,
     VkPipelineRasterizationStateCreateInfo rs{};
     rs.sType            = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rs.polygonMode      = VK_POLYGON_MODE_FILL;
-    rs.cullMode         = VK_CULL_MODE_BACK_BIT;
+    // Disable culling in shadow pass: world meshes have mixed winding
+    // and this avoids missing / clipped shadows on some props.
+    rs.cullMode         = VK_CULL_MODE_NONE;
     rs.frontFace        = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rs.lineWidth        = 1.0f;
     rs.depthBiasEnable  = VK_TRUE;
