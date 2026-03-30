@@ -102,14 +102,20 @@ void PhysicsCube::applyPushImpulse(const glm::vec3& dir) {
 
 // ── Grab update ───────────────────────────────────────────────────────────
 void PhysicsCube::updateGrab(const glm::vec3& targetPos, float dt) {
+    if (dt <= 0.0f) return;
     // Track velocity for throw estimation
-    if (dt > 0.0f) {
-        glm::vec3 rawVel = (targetPos - pos) / dt;
-        grabVelSmooth = glm::mix(grabVelSmooth, rawVel, 0.25f);
-    }
+    glm::vec3 rawVel = (targetPos - pos) / dt;
+    grabVelSmooth = glm::mix(grabVelSmooth, rawVel, 0.20f);
+
+    // Soft spring follow while grabbed so the cube keeps a physical feel.
+    glm::vec3 toTarget = targetPos - pos;
+    holdFollowVel += toTarget * (28.0f * dt);
+    holdFollowVel *= std::pow(0.06f, dt);
+    vel = holdFollowVel;
+
     prevGrabPos = pos;
-    pos = targetPos;
-    vel = {};
+    pos += vel * dt;
+    vel.y -= GRAVITY_A * dt * 0.25f; // still heavy while held
 
     // Damp rotation while held
     float gf = std::pow(0.15f, dt);
@@ -120,13 +126,14 @@ void PhysicsCube::updateGrab(const glm::vec3& targetPos, float dt) {
 // ── Release / throw ───────────────────────────────────────────────────────
 void PhysicsCube::release() {
     grabbed = false;
-    // Apply smoothed throw velocity (capped so it's not unreasonably powerful)
-    float maxThrow = 18.0f;
-    glm::vec3 throwVel = grabVelSmooth * 2.2f;
+    // Blend follow velocity and smoothed hand velocity, then cap hard.
+    float maxThrow = 13.0f;
+    glm::vec3 throwVel = vel * 0.85f + grabVelSmooth * 1.20f;
     if (glm::length(throwVel) > maxThrow)
         throwVel = glm::normalize(throwVel) * maxThrow;
     vel = throwVel;
     grabVelSmooth = {};
+    holdFollowVel = {};
 }
 
 // ── Respawn ───────────────────────────────────────────────────────────────
@@ -137,6 +144,7 @@ void PhysicsCube::respawn() {
     pos      = { pos.x + ox, PC_HALF, pos.z + oz };
     vel      = {};
     angVel   = {};
+    holdFollowVel = {};
     rotation = glm::identity<glm::quat>();
     grabbed  = false;
 }
