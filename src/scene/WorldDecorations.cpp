@@ -322,6 +322,8 @@ void WorldDecorations::placeFences(unsigned int& rng) {
         float ang = lcgF(rng)*6.2832f; // fence line angle
         float dx  = cosf(ang)*1.8f, dz = sinf(ang)*1.8f;
         int   num = 6 + (int)(lcgF(rng)*7.f); // 6-12 posts per segment
+        std::vector<glm::vec3> postPositions;
+        postPositions.reserve(num);
         for (int i = 0; i < num; i++) {
             float x = cx + dx*i, z = cz + dz*i;
             if (std::abs(x)>GROUND_HALF-1.f || std::abs(z)>GROUND_HALF-1.f) break;
@@ -334,15 +336,29 @@ void WorldDecorations::placeFences(unsigned int& rng) {
             post.aabbMin = post.pos - glm::vec3(0.07f,0.5f,0.07f);
             post.aabbMax = post.pos + glm::vec3(0.07f,0.5f,0.07f);
             m_byType[(int)PropType::FencePost].push_back(post);
-            if (i < num-1) {
-                PropInstance rail;
-                rail.pos = {x+dx*0.5f, GROUND_Y+0.35f, z+dz*0.5f};
-                rail.world = glm::translate(glm::mat4(1.0f), rail.pos)
-                           * glm::rotate(glm::mat4(1.0f), ang, YAXIS);
-                rail.bsCenter = rail.pos; rail.bsRadius = 0.9f;
-                rail.hasCollision = false;
-                m_byType[(int)PropType::FenceRail].push_back(rail);
-            }
+            postPositions.push_back(post.pos);
+        }
+
+        // Connect only actually placed posts so rails align with real pillars.
+        for (size_t i = 0; i + 1 < postPositions.size(); i++) {
+            glm::vec3 a = postPositions[i];
+            glm::vec3 b = postPositions[i + 1];
+            glm::vec3 d = b - a;
+            float len = glm::length(glm::vec2(d.x, d.z));
+            if (len < 1e-3f) continue;
+
+            float yaw = std::atan2(d.z, d.x);
+            float scaleX = std::min(1.0f, len / 1.8f);
+
+            PropInstance rail;
+            rail.pos = {(a.x + b.x) * 0.5f, GROUND_Y + 0.35f, (a.z + b.z) * 0.5f};
+            rail.world = glm::translate(glm::mat4(1.0f), rail.pos)
+                       * glm::rotate(glm::mat4(1.0f), yaw, YAXIS)
+                       * glm::scale(glm::mat4(1.0f), glm::vec3(scaleX, 1.0f, 1.0f));
+            rail.bsCenter = rail.pos;
+            rail.bsRadius = std::max(0.3f, len * 0.5f);
+            rail.hasCollision = false;
+            m_byType[(int)PropType::FenceRail].push_back(rail);
         }
     }
 }

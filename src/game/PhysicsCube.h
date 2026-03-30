@@ -21,6 +21,7 @@ public:
     // Grab / throw velocity tracking
     glm::vec3 grabVelSmooth = {};
     glm::vec3 prevGrabPos   = {};
+    glm::vec3 holdFollowVel = {};
 
     glm::mat4  worldMatrix()  const;
     float      bsRadius()     const;
