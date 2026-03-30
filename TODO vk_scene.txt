@@ -1,0 +1,619 @@
+TODO for v0.01-alpha [FINAL CHANGES]
+
+IMPORTANT WORKFLOW NOTE:
+- Rechanged the version from v0.07-alpha to v0.01-alpha because this includes major overhaul at architecture system so it makes the previous versions to be just prealpha versions [test version]
+- This is the FINAL CHANGES pass for v0.01-alpha.
+- Note that the work can be split into many parts.
+- All the additional changes [the one that isn't important yet], not too much priority addition, will be make into v0.01.1-alpha.
+- For now finishes all fixing the bugs in v0.01-alpha and removal and changes and additions that is big. And other minor changes.
+- Also can you pack the development build on v4.0 DX11 Scene and v5.0 DX11 Scene since i can't download the main.cpp [only the project files].
+- For now don't pack them yet, unless i say so.
+- Anything that has hard-coded data [such as dialogs, changelogs, etc] on it, should use json instead. 
+- Focus heavily on:
+  - bug fixing
+  - system corrections
+  - polish
+  - performance
+  - UI consistency
+- Do NOT introduce unnecessary new systems beyond what is written.
+- If something was not broken before, do not list it as a fix.
+- Keep the implementation faithful to the creator’s original intent and context.
+- Do not over-delete systems that are meant to stay. Only remove what is explicitly removed.
+- If a behavior is already clearly defined here, follow the exact behavior instead of improvising a different one.
+
+----------------------------------------
+PROJECT CONTEXT / INTENT
+----------------------------------------
+This version is a major rework of the game, not a small update.
+The goal is to preserve the core feel of the current game while improving the renderer, world visuals, gameplay flow, UI behavior, debugging tools, save systems, loading behavior, and overall polish.
+
+Some parts of the TODO are intentionally high-level, so interpret them in a way that matches the creator’s original direction instead of forcing random implementation choices.
+Do not delete or simplify away systems unless the TODO clearly says they are removed or replaced.
+
+----------------------------------------
+STARTUP / LOADING FLOW
+----------------------------------------
+- The progress bar in the loading screen should has a smooth transition between processes, not just grid based. 
+
+----------------------------------------
+RENDERING / PLATFORM REQUIREMENTS
+----------------------------------------
+- Fullscreen must follow the monitor aspect ratio natively and must not stretch to fit.
+- The title/window title should become: Vulkan 1.1+ Scene v0.0x-alpha
+- Add Global Illumination (GI):
+  - No user setting toggle (always enabled).
+  - Use a practical real-time approach such as SSGI, voxel GI, light probes, or a similarly stable method.
+  - Prioritize performance and stability over extreme realism.
+
+----------------------------------------
+UI / FLOW CHANGES
+----------------------------------------
+- Overhauls the textures for all of them [including the app icon].
+- Keep the styles just like the old DX11 scene. 
+- The title screen should use the same navigation-based UI style as the pause menu.
+- Keep the general layout style, but add a small version text in the bottom-right of the window:
+  - alpha 0% on the title screen
+  - alpha 50% during the play scene
+- The version text under the title text in title screen should be removed.
+- And the version text in the bottom-right of the loading screen isn't there. 
+- All the texts on the bottom of the UI [except reset save text] is removed [on the center one, not the edges or anything]
+
+- Improve the UI visuals on both the title screen and the actual gameplay UI.
+- Make the UI cleaner, more flexible, and adaptive to resolution changes.
+- Replace the keybind text with actual icons if possible.
+- We have the icon for it, so why not? 
+- The control information should still be available in the Controls tab of the Settings menu.
+- And i think it's time to remove the keybind hint only at the game scene, anything else will still have it. 
+- The keybinds hint now horizontal list to the left instead of vertical list to up.
+
+- UI must be forced to redraw properly when resolution changes or the window is resized.
+- All UI layout elements must be adaptive and flexible, not fixed in a way that breaks on smaller or larger resolutions.
+- All UIs should be make a bit bigger accordingly. 
+- If the resolution changes, UI must reflow instead of remaining visually broken or clipped.
+
+----------------------------------------
+TITLE SCREEN CAMERA / BACKGROUND
+----------------------------------------
+- The title screen background should not be static.
+- The title screen background is on a place somewhat far away from the main world. 
+- The place consists of a small flat ground and the player just sitting under a wall, the camera is looking at the wall [the wall is a bit to the right alongside with the player to showcase the day/night system].
+- When the user is playing the game, unloads the place and the day/night is reset back to the default.
+----------------------------------------
+GAME WORLD / VISUALS
+----------------------------------------
+- Add textures to the application.
+- Add a proper skybox.
+- Improve the cube model visually.
+- Visual quality can be low, medium, or high, but it should feel coherent and polished. 
+- A complete rework on the font looks, should be like the original DX11 scene with some tweaks on it. [8bit ascii i think]
+- Make the ground a bit smaller [650x650m]
+- Replace the flat plane with generated terrain:
+  - use smooth Perlin noise
+  - NOT blocky
+  - smooth slopes
+- Convert the map into:
+  - a dynamic island
+  - surrounded by ocean (1500x1500m)
+  - beach edges
+  
+- Generate a random player seed only at PlayerCreate [in which means that a save file didn't exist before] and random between the range of signed 64-bit integer.
+- This seed is saved to player data.
+- This seed determines the world generation. 
+  
+- Add a structure generation system [this all will be on a C++ file called WorldGen.h/.cpp] based on player seed. 
+  - For now it will be a simple house, a simple tower.
+  - Add a randomized item drop on the floors of the house [not too crazy item], and also towers.
+
+- Add a large amount of world decorations with variety:
+  - vegetation
+  - rocks
+  - terrain clutter
+  - general environment props
+  - trees, bushes, grass variants, mushrooms, fences, crates, stones, signs, debris, and similar fitting objects
+- These decorations should feel dense, varied, and not repetitive.
+- Use randomization, variation, clustering, and instancing where appropriate.
+- Ensures that trees has a distance between each other. 
+- Decorations:
+  - most should have collision
+  - 2D grass should be double-sided and have no collision
+  
+- Fix fence part with the one that connects pillar to another pillar, isn't rotated properly [like they stuck at 90° snap or something] with the pillars. 
+
+- Make the lighting better and add lighting-related settings.
+- More lighting settings and graphics settings
+- Revamp the skybox if needed so it looks cleaner and more believable.
+- Add moon and sun textures so their visual positions can be seen.
+
+----------------------------------------
+CAMERA / FREECAM SYSTEM
+----------------------------------------
+- Freecam toggle keybind: Shift + P
+- Add smooth camera FOV motion. 
+- Add smooth camera motion:
+  - Smooth acceleration when starting movement
+  - Smooth deceleration when stopping movement
+  - Use interpolation, damping, or velocity smoothing instead of instant speed changes
+- Camera rotation must also feel smooth, with no snapping.
+- Movement should feel floaty but controlled.
+
+----------------------------------------
+GAMEPLAY SYSTEMS
+----------------------------------------
+- Add a physics cube pushing system that feels natural and uses a swing-meter style power mechanic instead of a plain push.
+- Fix the physics cube so its hitbox actually behaves like a real rotating object instead of only rotating an imaginary cube.
+- The hitbox cube must and a must to follow the visual cube and it's calculated on the new physics tick.
+- The physics cube now follows a physics calculated based on the new physics feature. This should be implemented a long time ago. 
+- Make throw force reasonable instead of too powerful.
+- When grabbing the cube, the hitbox shall remain active and the object must still follow physics.
+- Do your best to avoid no-clipping collidable objects when grabbing.
+- The cube should always remain gravity-affected unless it is directly above a non-collidable or empty area.
+- Allow the player to grab and still push at the same time.
+- When grabbing and push, well ungrab it and then push. 
+- Fix if still pushing and then not looking at it, the bar keeps swinging in background and then updates when you look back. 
+- Fix the game thinks the player's not on the ground and it swings over like fast [not on ground -> ground -> not on ground and so on] if the player is on a object that has a hitbox, this also prevents the player from jumping but the player still can, but it's just hard.
+- Change the rotating cube in the spawn pos to Utah Teapot as a standard ;>
+
+- Allow the player gains dynamic momentum while the player is running or falling and also keeps the camera FOV when the player falls, kinda like gmod physics.
+
+- Add a money system based on the distance the cube is pushed or thrown.
+- If the cube falls into the void, still calculate the distance using its current X and Z position only, ignoring Y.
+- For void handling:
+  - Delete any objects beside the player if it touches the void. 
+  - Before the physics cube was deleted and it's on push mode, save the X and Z position to Vector2 variable and then calculate just like the above. 
+  - if the object has momentum, reset velocity to 0 when teleporting
+- Money must be distance-based only in meters: not one unit more, not one unit less. 
+
+- Add a cheat system which uses keylogger [not the one to log your key to get your data, alternative definition] to detects certain character press in which makes a secret word and then triggers a cheat based on the word typed. Notes that it didn't matter if you use cap-locks to capitalize your characters, it still detects it. 
+  - DEBUGDEV will shown a debug options UI. 
+  - UNTIQUE will make a random effect based on this:
+     - All pixel on the window gets its color reversed, just static reversed not a flash one for 25 seconds. 
+     - Debuffs the player with 0.7x walk speed, 0.8x sprint mult, 0.75x jump velocity, 1.5x energy drain, 0.85x regen speed for 20 seconds.
+     - Glitch and chromatic effect on the game for 27 seconds.
+     - Get the player $1 and 1 Diamond [if they have it, this is rare so decreases the odd for this one].
+     - Triggers fake ban event. 
+
+- New money behavior:
+  - the new way of earning money is by pushing the physics cube as far as possible using the swing meter
+  - while the cube is still moving and has not hit anything, display a live score or distance indicator
+  - when it hits something, do a quick calculation to determine how much money is awarded
+  - if it falls into the void, reset it to the original spawn position and calculate reward using only the original X/Z position at void threshold
+
+- Add physics system in which the requirements are a must implemented:
+- Physics requirements:
+  - physics must run at fixed 60 FPS
+  - every physics tick should try to calculate all non-static objects together, such as:
+    - player
+    - crates
+    - physics cube
+    - any other movable or affected object
+  - the simulation should update transform, hitbox, gravity, and collision coherently in the same physics step
+  - the hitbox must follow the model rotation at all times
+  - the model and hitbox must count as one object
+  - all physics objects should update transform + hitbox + collision together
+  - if the physics step finishes early, wait until the next physics interval
+  - if the physics step exceeds the cap, do not sleep; immediately continue to the next physics calculation
+  - the physics cap is 60 FPS for simulation, even if rendering differs
+  - display the physics calculation time in debug when a physics step finishes
+ 
+- Add nextbot entity system where an image-based avatar that's stares at the player and a nav mesh system chases the player at fast speed but the player can still outrun it by running. 
+  - For now, use sawit_nextbot.jpg i give you. [named as entity name: pohon_sawit]
+  - Oh and the nearest the player get that nextbot, make sure that it has a glitch [pixel inside the window] + vignette system and it gets worse if you come closer [default: 25m min]. 
+  - When the player get in contact with the nextbox, instant death and shows a jumpscare [uses assets/textures/entity/nextbot/jmpscare_1.png] and play a sound [uses assets/sounds/sfx/jumpscare_1.mp3] [like about 4s] then disappear. The Z order is higher than any other scenes UIs but still lower than debugs menu, pause menu, and alert menu.
+  
+ - This can be spawned on the developer console which spawn a nextbot type based on the entity_name parameter, and the position is at random position around the island.
+ 
+- Add backwards save and settings compability that is based on the save file and settings file format version at the start of the files.
+- If a newer save system is detected, warns the player at the start of the loading screen, if the player wants to load and update the version to the old version [the alert kinda like "A newer save/system [or both] file (v[new version], just the number protocol version) is detected.. Would you like to load this save file? Ensures that you have a backup save"If no, then just straight up fatal error the user. 
+
+----------------------------------------
+AUDIO
+----------------------------------------
+- Add the “FAHHH!!” meme sound effect when pushing something.
+- Removes title_screen.mp3
+
+- Add sound effects for:
+  - cursed object interaction at night [this also reused for the nextbot_1's jumpscare]
+  - button click
+  - player death
+  - crate interaction
+
+----------------------------------------
+PROGRESSION / SYSTEMS
+----------------------------------------
+- Add a save system with a custom encoded algorithm for general player data, including money and other important state.
+- Add a new currency called Diamond.
+- Diamonds start locked.
+- To unlock diamonds, the player must find 5 hidden cursed geometry objects with corrupted textures around the world.
+- Make them somewhat hidden and possibly puzzle-based.
+- Interacting uses E keybind, increments progress, and saves progress.
+- Add an effect and sound when interacting.
+- When the final object is collected:
+  - trigger the “IT’S NOT YOUR FAULT” event
+  - permanently unlock diamonds
+- Diamond progress must persist.
+
+- Cursed object rules:
+  - each cursed object should have different geometry and textures
+  - do not reuse one generic model for all of them
+  - add cryptic hints around the world for discovery
+  - the objects should not be on the edge of the world
+  - most should be in middle-range or near spawn, but still hidden
+  - final cursed object:
+    - night only
+    - in a separate place
+    - requires a series of puzzles scattered around the world to access
+
+----------------------------------------
+NPC SYSTEM
+----------------------------------------
+- The NPC model should be a little bit smaller with the model lego-like/Roblox R6 like. 
+- Add texture to the NPCs. 
+- Add a shop NPC with a unique ability that is not just cosmetic.
+- The NPC should feel alive or special, not static and boring.
+- The NPC should patrol and also rotates to the point every 3-5s [walk speed: like the default player speed, this is the delay when after finishes a patrol] around a random point in around its spawn point [radius: 25x25m].
+- When is on patrol/not in patrol, The NPC pauses the current patrol or pause the patrol delay timer when the player is near. 
+- The NPC shouldn't be directly watch the player when far away.
+- When the player is near, The NPC head from its current position will stare the player slowly, then when it done the rotate, then rotates the whole body [except head] to the player.
+- This behavior is similar to Villager rotate behaviour on Minecraft. 
+- The unique ability should meaningfully affect gameplay.
+- Creative direction options:
+  - the NPC travels between a few world locations on a schedule and changes stock based on time of day
+  - the NPC remembers the player and occasionally offers a discount or rare item after repeated visits
+  - the NPC reacts differently depending on day/night or progression state
+- The ability should affect gameplay, not just dialogue.
+- Add an Interact Dialog UI when player is interacting with a NPC, to no direct shown an UI like NPCs Shop did (uses Pick system just like alert menu does, but the different is either you can tab based or by click to go to another dialog or pick an option). 
+- Add a static NPC called "Glenn" sitting under a random tree which is when interacted, just show a random dialog which either can be fun facts about things on real life, computer science [OS, hardware/software, programming with a line snippet of code, rendering, etc.] or sometimes it gives the player a lore of why the player is "on" this island and general lore i guess.. 
+
+- Shop system:
+  - uses money and diamonds
+  - diamonds appear locked or greyed out if not unlocked
+- Example items:
+  - physics cube for $1000
+  - bouncy physics ball for $10000
+- Expand the item list creatively and balance pricing.
+
+- Fix the physics cube and bouncy physics ball not spawning as it is should be.
+- These spawns at front of the NPC head with some distance.
+
+- Add more items:
+  - regen boost
+  - instant health
+  - jump boost
+  - all-in-one buff potion
+  - other unique item ideas that fit the game
+  
+- Visit is only incremented once at the current NPC [resets when another shop NPC spawns], to prevent player getting loyalty discount too easy. 
+- The loyalty discount now has an additional requirement to give you one. 
+
+- NPC dialogue:
+  - add more dialogue content
+  - add more variety so the shop does not feel empty. 
+
+- NPC naming:
+  - replace placeholder “US” naming with 25 common names from around the world
+
+- NPC despawn behavior:
+  - if the NPC is about to despawn and the shop UI is still open, politely warn the player to exit the shop
+  - if the player still keeps it open, force-close the UI with a polite message
+
+----------------------------------------
+TIME SYSTEM
+----------------------------------------
+- Add a day/night system.
+- Game time: 1 in-game hour = 1 real minute
+- 3 diamond objects spawn only at night
+- 2 spawn only during the day
+- Night should actually be dark:
+  - 21:00 should be fully dark
+  - no sun should remain visible and its light at 02:00AM
+  - ambient light should properly dim
+- Fix day/night cycle if it is currently broken.
+
+----------------------------------------
+SPECIAL EVENTS / EFFECTS
+----------------------------------------
+- Remove the too-rich event.
+- Keep “IT’S NOT YOUR FAULT” as an easter egg.
+- Add smoother window-shake, less aggressive than before.
+- Don't remove the window shake entirely. Add them back. 
+- Lower the hard cap of the shake.
+- Replace the zoom effect with:
+  - large red text flooding diagonally from top-right to bottom-left [not bottom-right to top-left]
+  - Gave a video as a reference and how the effect should look.
+  - repeated “IT’S NOT YOUR FAULT” text
+  - Ignore the flashing part in the video. 
+  - horror-style movement similar in spirit to Specimen-like jumpscare movement
+- Ensure clean reset after the effect ends.
+
+- When the “IT’S NOT YOUR FAULT” event triggers:
+  - the window title changes into “YOUR FAULT”
+  - animate it slowly:
+    - “Y” → “YO” → “YOU” → “YOUR” → “YOUR F” → ...
+  - keep the interval around 200ms with slight randomness
+  - after the effect ends, revert the title back to the original
+
+- Add earthquake effect:
+  - camera shaking
+  - ground crack decal or similar visual hint
+  
+- Magnet pulse shouldn't directly teleport all the physics cubes to the player instantly, instead it acts like you are a blackhole and it just pulled all the cubes towards you until certain timer is done. 
+- Also add more subtle timer bar to some effect because there is some effect that is timer-based but didn't have a timer UI.
+- Add fake ban event named fake_ban that's it just like alert menu but it's says "You have been banned from this client.", then 10s later it will update the text with the same text but added " [just kidding]" in the back. then 5s later, it show your game as normal. triggers when UNTIQUE cheat is activated or sv_cheats command on developer console is executed. 
+- Add an actual memory leak named memory_leak [just a controlled simulated memory leak] with max rate of 10MB/s [the rate is from current rate until that max rate, slowly increases the rate to test the memory leak flashing alert system in debug [shift+F1]] and eventually stopped and unallocated when total 1GB is triggered. before this, checks if all available memory is above 1GB with a safety margin of 200MB [add them, this is a constant], if yes then do it with no further changes, if no then try to divide the check by 2 [like from 1GB -> 500MB] then do it again until it agrees and so on.
+- Removes Diamond Pulse because it's i think harder to get and you will get those on Shop NPC anyway which those will be useless anyway since you already have all cursed objects. 
+
+----------------------------------------
+DEBUG / DEVELOPER TOOLS
+----------------------------------------
+- Shift + F1–F4 debug system
+- The keybinds like thing on the title bar must be removed. As an example: "[WORLD DEBUG] Shift+F3"
+- Show rendering, world, and system data
+- Move render debug and world debug UI to the left side. 
+- Add a debug options as a cheat key "DEBUGDEV" which show a list of options to toggle certain rendering pipeline or literally anything about rendering, etc.. and has its own navigation-tab based. 
+   - This is a list of examples:
+      - Enable drawing object [exc. hitbox]
+      - Show ground
+      - Show hitboxes
+      - Show vegetations
+      - Show textures
+      - Show skybox
+      - etc.. you decide what it will be the rest. 
+- Overall polishes the visual UI looks on all debug UIs, because there is some text that i can't read it properly because it was too small to read. 
+- Making sure that constants value [a value that's never going to be write there at runtime, and it shouldn't be changed unless we do so at development] mustn't be referenced on these debug menu. 
+
+- Developer console:
+  - logs, warnings, errors
+  - OutputDebugString integration
+  - C++ enum-based logging system
+  - when editing values in the console, use C++ syntax rules and C++-style parsing/formatting
+  - fix variable assignment issue (currently commands like sprint_mult = 454545.0 do not work)
+  - moveable UI with dragging system in the title bar, just like any generic OS drag window system. 
+ 
+- The debugs text + menu should be made a bit bigger so that the player can see the text and make it readable atleast. [the root issue is on the font rendering itself, or the font itself]
+- All debug UIs should be bigger than usual.
+- Re-adds dt time for CPU and bring back the GPU timer and also its dt. 
+- Format should be like this "CPU: [frametime] (dt [deltatime])".
+- These are on general-purpose debug and also rendering debug. 
+- Also add memory text from the general purpose debug to also available on rendering debug. 
+
+- Default console behavior:
+  - when the console opens, it must not immediately capture typing
+  - the player must press Enter OR click the input box before typing
+  - until then, gameplay input should still work normally
+- Shift + F4 must be a true toggle:
+  - press once to open
+  - press again to close
+  - do not require Esc to exit
+- Add a Close box button in the console UI so it can also be closed by clicking.
+- When the player close the developer console, it didn't relock the cursor back, but it will fixed itself when you move the camera, but still is very annoying.
+- Allow the player to navigate the input box in the commands to access certain character [using arrow keys, left/right] without having to delete in the back of it which is annoying.
+
+- Main console view:
+  - merge Logs + generic commands view together
+  - this is the default main console tab
+  - normal console text output and command input live together there
+
+- Add separate tabs inside the developer console:
+  - Main (logs and commands bar) 
+  - Profiling / Memory
+  - Any additional debugging tools
+  
+- Logs has a filter system to filter out all the logs that's generated by:
+  - Output: Message that is generated by calls to normal log functions [show as just generic white text with no prefix icon].
+  - Warning: Message that indicate a potential problem but not a critical issue [show as yellow text with prefix warning icon]. 
+  - Error: Message that indicate something critical has happened [show as red text with prefix error icon].
+  
+- Add error and warning counts on the console title bar and these error and warning has a icon for it (these icons also be used when a warning/error log occured, shown in the front of the text).
+- Add a search system to search certain keywords.
+- Add an autocomplete feature that has a list of all commands and has a tab to complete function, just generic autocomplete system.
+- If an error/warning is occured, show where the script path is and also what line is the cause for this warning/error. like for example: "Unable to find "assets/sounds/sfx/push_sfx.mp3". [engine/somescript.cpp at line 172]", yes these project file is on a "folder" called engine, but the folder don't exist [and it shouldn't be] and it's just like "internal" namespaces.
+- This is somewhat very hard to implement [Warning/Error] because this isn't like Lua or anything that you can run it on a separate VMs and can check scripts. This is pure C++ and these guys also in runtime which makes it somewhat harder especially the internal scripts itself. And just use "try & catch" keyword in like every single function lolz, i don't know how do you will implement this. great effort comes with great responsibility, idk why i make that up. 
+
+- Memory usage display:
+  - show it always in the console title bar as:
+    "Client Memory Usage: [memory usage]"
+  - this should be visible at all times while the console exists
+  - this is updated every 1 second.
+
+- Put advanced features such as memory profiling, script profiling, and log export on a separate tab, not mixed into the main console view.
+- Make the background in the console UI have alpha of 35%.
+
+- Add commands:
+  - esp_cursedobj [true/false]
+  - force_unlockdiamond
+  - sv_cheats [true/false]
+  - trigger_event [event_name]
+  - fall_damage [true/false]
+  - give_items [item_name]
+  - spawn_entity [entity_name]
+  - other generic debug stuff if you can.
+
+- Console extras:
+  - memory usage display
+  - script profiling
+  - memory profiling
+  - log export
+
+- General debug / world debug:
+  - show physics calculation time when a physics step finishes
+  - show it as part of general debug and world debug output
+
+----------------------------------------
+UI / HUD
+----------------------------------------
+- Health bar:
+  - bottom-left
+  - always visible
+  - smooth transition animation when damaged
+
+- Stamina bar:
+  - bottom-middle
+  - never fully reaches 0 visually (stays around 5–10%)
+  - This was because apparently the stamina was stuck at 5, and once it goes to idle/walk, it starts to regen and then it's because the player still holds the run keybind, it will going to run state and that way will make a loop.
+
+- Remove background from:
+  - clock
+  - money UI
+  - use pure text with a subtle outline
+  
+- When an UI is opened [such as Shop UI, Pause UI, or anything like that], the "interact" text is not hidden properly.
+  
+- Add a save game option in pause menu to trigger a manual save.
+- When a save is triggered either manual or automatic, show a save icon with some animation with in. 
+- Once done, display a notif in bottom-middle of the window [also give it some margin with the bottom side to prevent overlapped with stamina bar].
+- Only relocate keybind display so it does not overlap the rest of the UI.
+
+- Add an exit to the title screen option in pause menu to return back to the title screen and saves the player data. 
+- The save text on bottom of the window in title screen shouldn't be there.
+- Also if on title screen, the player can hold Backspace for 3 seconds and then resets the save data to default. Also return the player to the loading screen with fade animation.
+- This replace the save text on bottom of the window in title screen to the hint text for the reset like "Hold Backspace for 3 seconds to reset your data.". oh and also add an alert menu if the player want to continue reset or not. 
+
+- Add a hotbar system so the player can carry multiple item types.
+- Previous versions [pre-alpha] in changelogs come with versioning format like: "vx.x-prealpha" except for triangle dx10 scene which follows "v1.0-pac2"
+- Changelogs instead stored in the Game.cpp, should be separated as a json file and allow detection of newer version to show. 
+
+- Add item stacking:
+  - max stack = 999
+  - show stack count in UI
+  - if max reached, deny pickup/purchase and show that the item is already at max
+
+----------------------------------------
+FULLSCREEN / ALT-TAB / VOID HANDLING
+----------------------------------------
+- Maintain proper windowed borderless behavior.
+- Rename and treat the setting explicitly as:
+  Windowed Borderless
+- This must be a proper actual Windowed Borderless mode, not fake fullscreen borderless.
+
+- If the selected resolution is lower than the actual display resolution, keep it as Windowed Borderless.
+- If it is higher than the actual display resolution, scale appropriately but still preserve Windowed Borderless behavior.
+- Fix initialization so selected Fullscreen or Windowed Borderless actually starts in Fullscreen and Windowed Borderless instead of defaulting to Windowed.
+- Same for Windowed Borderless if selected.
+- When fullscreen or Windowed Borderless loses focus:
+  - hide the window from view
+  - keep it present in the taskbar
+  - keep it present in Alt+Tab
+  - so the player can return by clicking the app in the taskbar or using Alt+Tab
+- This should not close the program, only hide the visual window while unfocused if that mode requires it.
+
+- Player at or below the void should teleport using:
+  - current X and Z position
+  - slight random X/Z variation
+  - Y position based on the closest terrain ground height at that X/Z point. 
+  - Y position must be clamp on the Y terrain ground height check when under 100, if it's triggered, sets the Y position to 0 and set a flag called IsStillVoid to true. 
+  - If the flag is true, then do a X/Z random variation again with the same random min, max value, then checks the Y position from its new X and Z position. if it still detects void however, keeps doing this for 500x times and stops until it doesn't detect void anymore. If it's detected a ground, then set the Y level to that ground level and spawn it to that position, if it can't find a ground after 500 attempts, it just gives up and spawns you at the default SPAWN_POS.
+  - During this check, don't actually update the player position
+  - For any objects besides the player, will be deleted no matter what. 
+- If the object has momentum, set velocity to 0 when teleporting.
+- Fix alt-tab behavior:
+  - if “Pause when Focus Loss” is on, returning to the app should not leave the cursor visible while playing
+  - cursor locking must work properly
+  - fullscreen should restore correctly after alt-tab even if selected resolution differs from actual resolution
+  - the app should not remain stuck in windowed mode
+  - the window should be hidden properly on focus loss / alt-tab when needed
+
+----------------------------------------
+SETTINGS / TAB BEHAVIOR
+----------------------------------------
+- Settings must be organized into their own tab.
+- Pressing Enter should select:
+  - a tab then
+  - a setting then
+  - allow changing it
+- By default, if nothing is selected, Enter should not trigger a change.
+- Only allow Apply if something actually changed.
+- If nothing changed, do not allow the player to apply nothing.
+- The keybind to Apply is Space, these differed from the Enter, Enter is to select and Space is to apply it. 
+- If the player tries to Apply without any actual modifications, prevent the action.
+- Add an autosave setting which the settings is Off, 30s, 1min, 3min, 10min.
+- This setting also add an autosave system to the game.
+- Allow the user to make an infinitely effect when selecting a setting like if you travelled across the world in a straight line, it will eventually go to your original position, just like that, no hard limit when selecting at the edge of a setting. 
+- If a setting requires a restart such as Vulkan renderer version changes, show a warning alert such as:
+  "This setting requires you to restart the game. Are you sure to continue? Any unsaved saves may be lost."
+- Let the player decide whether to continue.
+- If the player decides yes, then restart and properly change the Vulkan version. If the player decides No, then just simple cancel, but don't reset the settings to previous selected setting.
+- Apply should only work if the player is actually changing something
+- If no change is pending, Apply must do nothing / be disabled and its keybind text is hidden.
+- Add a reset to default keybind to reset back all settings in the selected tab back to defaults. Also if pressed, show an alert menu indicate that if the player wants to continue or not and it have been warned.
+- Ensure if all settings is already on default, then that keybind must be disabled and its keybind text is hidden. 
+
+----------------------------------------
+REMOVALS / REPLACEMENTS
+----------------------------------------
+- Remove the bottom pause-menu keybind text. ALL keybinds text [except the one at keybinds hint ON the bottom-right of the window] SHALL and MUST be removed explicit. 
+- Do not remove systems that are still meant to exist; only replace or relocate the parts explicitly mentioned.
+- The bottom pause-menu keybind text must be removed with NO exception.
+- This does NOT refer to the bottom-right keybind hint elsewhere in the window; only the pause-menu bottom text must be removed.
+
+----------------------------------------
+RENDER / PERFORMANCE / SIZE
+----------------------------------------
+- Rewrite shaders i think?
+- Optimize performance globally
+- Fix rendering quirks
+- Reduce unnecessary overhead
+- Sometimes if an object is at the edge of the window [either top, bottom, left, right], randomly get culled [hidden] and quirks by the rendering engine.
+- Rendering distance no longers uses thick fogs to do it, instead they just unloads all objects that's [the ground is a bit complex tho] further than the rendering distance. 
+
+- Investigate:
+  -> why the main executable is ~5MB (too big / suspicious)
+  -> explain why the main executable is big. [the code itself only has ~378KB which is weird..]
+  -> found that .text section and .rdata is very big somehow.. that is suspicious.
+  -> if it were because of text somehow, uses localization system as Jsons outside the exe itself
+- Ensure:
+  - all textures are actually used
+  - no wasted assets
+  - shadow map/system needs to be fixeddddd
+  - lightning is properly implemented
+  - proper culling system.
+  - The fog system is too thick and it's not like actual fog. 
+
+----------------------------------------
+CODE / DELIVERY REQUIREMENTS
+----------------------------------------
+- Use separate .h and .cpp files properly.
+- Keep the base code readable.
+- Use clear variable names.
+- These are really useful when the creator wants to fixes by themselves and understand the context. 
+- Add helpful comments explaining what the code does.
+- Add numerous humorous comments and a little bit profanity [not the crazy one like f##k, s##t, etc. use the one like ugly hack or something] if possible.
+- Bundle everything into a .zip file once finished.
+- If any asset files are needed, try to pack them into a single custom container file with an original extension if possible. Let's try this, can you do this? 
+- Also include step-by-step build instructions and any needed changes for compiling/running properly.
+
+----------------------------------------
+CHANGELOG SYSTEM
+----------------------------------------
+- Use version format:
+  vx.x-prealpha IF before the current version [v0.01-alpha], for the triangle dx10 scene, uses v1.0-pac2
+- Rebuild changelogs from:
+  - original DX11 version (v1.0-pac2 equivalent)
+  - which are the triangle dx10 scene
+  - up to current version
+  - which is now
+- Only include REAL changes
+- Do NOT list fixes and that never existed
+- Ensure that internal things isn't referenced
+
+----------------------------------------
+BUGS TO FIX FIRST
+----------------------------------------
+1. Physics cube rotation and hitbox behaviour
+2. Physics cube grab/throw force balance
+3. Cursor and focus-loss behavior
+4. Fullscreen restore bug after alt-tab
+5. Any rendering/API issues caused by the Vulkan rewrite
+6. Shadows behaviour, not too flexible and not display the actual shadow of an object. It's broken. 
+
+----------------------------------------
+FINAL GOAL
+----------------------------------------
+Stabilize the game into a:
+- correct physics system
+- polished gameplay loop
+- stable rendering
+- optimized performance
+- content-rich world
+- responsive UI that adapts correctly to resizing and resolution changes
+
+This is the FINAL CHANGES update.
