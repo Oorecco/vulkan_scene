@@ -1322,8 +1322,6 @@ void Game::drawLoadingScreen(UIBatch& b) {
                    : prog<0.95f ? "Waking the NPC from their nap..."
                    :              "Almost there (no really this time)...";
     float sw=b.strW(1.4f,st); b.str(CX-sw/2,BY+BH+12, 1.4f,st, 0.6f,0.7f,0.8f,0.8f);
-    const char* ver="v0.07-alpha";
-    b.str(W2-b.strW(1.1f,ver)-6,H2-GLYPH_PX*1.1f-6, 1.1f,ver, 0.3f,0.4f,0.5f,0.6f);
 }
 
 void Game::drawTitleScreen(UIBatch& b) {
@@ -1334,8 +1332,6 @@ void Game::drawTitleScreen(UIBatch& b) {
     const char* ttl="VULKAN 1.1+ SCENE"; float tw=b.strW(3.2f,ttl,3.2f);
     b.str(CX-tw/2+3,42+3, 3.2f,ttl, 0,0,0,alpha*0.5f,3.2f);
     b.str(CX-tw/2,42,     3.2f,ttl, 0.28f,0.72f,1.f,alpha,3.2f);
-    const char* sub="v0.07-alpha"; float sw=b.strW(1.5f,sub);
-    b.str(CX+tw/2-sw-2, 42+GLYPH_PX*3.2f-GLYPH_PX*1.5f+2, 1.5f,sub, 0.4f,0.7f,1.f,alpha*0.7f);
     static const char*  items[3] = {"Play","Settings","Quit"};
     static const float  ic[3][3] = {{0.8f,1.f,0.8f},{0.6f,0.8f,1.f},{1.f,0.5f,0.4f}};
     float iy=H2*0.55f, IH=GLYPH_PX*2.4f+12;
@@ -1407,9 +1403,8 @@ void Game::drawEnergyBar(UIBatch& b) {
 }
 
 void Game::drawVersionText(UIBatch& b) {
-    // Spec: alpha 0% title, 60% gameplay. Only called from gameplay path, so always 0.60f.
-    const char* ver="v0.07-alpha"; float vw=b.strW(1.2f,ver);
-    b.str(W()-vw-6.f,H()-GLYPH_PX*1.2f-6.f, 1.2f,ver, 1,1,1,0.60f);
+    const char* ver="v0.01-alpha"; float vw=b.strW(1.2f,ver);
+    b.str(W()-vw-6.f,H()-GLYPH_PX*1.2f-6.f, 1.2f,ver, 1,1,1,0.50f);
 }
 
 void Game::drawHintsPanel(UIBatch& b) {
@@ -1547,7 +1542,7 @@ void Game::drawDebug(UIBatch& b) {
     const float SC=1.f,LH=12.5f,PAD=6.f; float PX=8,PY=8,PW=390,PH=400;
     b.rect(PX,PY,PW,PH,.02f,.04f,.12f,.92f); b.rect(PX,PY,PW,2,.18f,.45f,1.f,.90f);
     float tx=PX+PAD,ty=PY+5; char buf[200];
-    b.str(tx,ty,SC,"[ DEBUG v0.07 | ` = console ]",.25f,.60f,1.f,1.f); ty+=LH;
+    b.str(tx,ty,SC,"[ DEBUG v0.01 | ` = console ]",.25f,.60f,1.f,1.f); ty+=LH;
     b.rect(tx,ty,PW-PAD*2,1,.05f,.12f,.30f,1.f); ty+=LH;
     snprintf(buf,sizeof(buf),"FPS:%.1f  CPU:%.2fms  PhysStep:%.3fms",m_fps,m_cpuMs,m_lastPhysStepMs); b.str(tx,ty,SC,buf,.22f,.65f,1.f,1.f); ty+=LH;
     snprintf(buf,sizeof(buf),"Pos: %+.2f %+.2f %+.2f",m_player.pos.x,m_player.pos.y,m_player.pos.z); b.str(tx,ty,SC,buf,.22f,.70f,1.f,1.f); ty+=LH;
