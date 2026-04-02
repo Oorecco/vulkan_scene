@@ -836,6 +836,12 @@ void Game::onFocusGained() {
     if (m_hiddenForFocusLoss) {
         ShowWindow(m_hwnd, SW_SHOW);
         SetForegroundWindow(m_hwnd);
+        if (m_settings.WMode() == WinMode::Fullscreen || m_settings.WMode() == WinMode::Borderless) {
+            int sw = GetSystemMetrics(SM_CXSCREEN), sh = GetSystemMetrics(SM_CYSCREEN);
+            SetWindowPos(m_hwnd, HWND_TOPMOST, 0, 0, sw, sh,
+                         SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+            m_renderer.resize((uint32_t)sw, (uint32_t)sh);
+        }
         m_hiddenForFocusLoss = false;
     }
     if (m_appState == AppState::Playing && !m_paused
